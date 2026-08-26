@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Disease Detection — KrishiMitra</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function() { console.log('SW registered'); })
+        .catch(function(err) { console.log('SW error:', err); });
+    }
+  </script>
+  <!-- lang.js already present in disease.html -->
+  <script src="/static/lang.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green-deep:#0d1f0f;--green-dark:#122a14;--green-mid:#1a3d1c;
+      --green-accent:#2d6a30;--green-bright:#4caf50;--green-glow:#6fcf72;
+      --amber:#e8a838;--text-main:#eef4ee;--text-muted:#8aaa8c;
+      --glass-bg:rgba(13,31,15,0.6);--glass-border:rgba(76,175,80,0.18);
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;background:var(--green-deep);color:var(--text-main);min-height:100vh;overflow-x:hidden}
+
+    /* NAV */
+    nav{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 3rem;height:64px;
+      background:rgba(13,31,15,0.2);backdrop-filter:blur(12px);
+      border-bottom:1px solid rgba(76,175,80,0.1);
+      transition:background .4s,border-color .4s;
+    }
+    nav.scrolled{background:rgba(13,31,15,0.92);border-bottom-color:var(--glass-border)}
+    .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;text-decoration:none;display:flex;align-items:center;gap:8px}
+    .logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--green-accent),var(--green-bright));display:flex;align-items:center;justify-content:center;font-size:16px;transition:transform .3s}
+    .logo:hover .logo-icon{transform:rotate(-10deg) scale(1.1)}
+    .nav-links{display:flex;gap:2rem;align-items:center}
+    .nav-links a{font-size:14px;color:rgba(255,255,255,0.75);text-decoration:none;position:relative;transition:color .2s}
+    .nav-links a::after{content:'';position:absolute;bottom:-3px;left:0;right:0;height:1px;background:var(--green-glow);transform:scaleX(0);transform-origin:left;transition:transform .25s}
+    .nav-links a:hover{color:#fff}
+    .nav-links a:hover::after{transform:scaleX(1)}
+    .nav-links a.active{color:var(--green-glow)}
+    .nav-links a.active::after{transform:scaleX(1)}
+
+    /* HERO */
+    .hero{
+      position:relative;min-height:100vh;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:0 2rem;overflow:hidden;
+    }
+    .hero-bg{
+      position:absolute;inset:0;z-index:0;
+      background:
+        linear-gradient(180deg,rgba(5,15,6,0.55) 0%,rgba(5,15,6,0.72) 100%),
+        url('https://images.unsplash.com/photo-1530836369250-ef72a3f5cda8?w=1600&q=80') center/cover no-repeat;
+      transform:scale(1.04);animation:bgZoom 14s ease-out forwards;
+    }
+    @keyframes bgZoom{to{transform:scale(1)}}
+    .hero-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:180px;background:linear-gradient(to bottom,transparent,var(--green-deep))}
+    .hero-tag{
+      position:relative;z-index:1;
+      display:inline-block;font-size:13px;letter-spacing:2px;text-transform:uppercase;
+      color:var(--green-glow);font-weight:500;margin-bottom:1.2rem;
+      opacity:0;animation:fadeUp .7s .3s forwards;
+    }
+    .hero h1{
+      position:relative;z-index:1;
+      font-family:'Playfair Display',serif;
+      font-size:clamp(2.4rem,6vw,4rem);font-weight:700;
+      color:#fff;line-height:1.15;margin-bottom:1.4rem;
+      opacity:0;animation:fadeUp .7s .5s forwards;
+    }
+    .hero h1 span{color:var(--green-glow)}
+    .hero p{
+      position:relative;z-index:1;
+      font-size:17px;color:rgba(255,255,255,0.7);font-weight:300;
+      max-width:500px;line-height:1.7;margin-bottom:2.2rem;
+      opacity:0;animation:fadeUp .7s .7s forwards;
+    }
+    .btn-try{
+      position:relative;z-index:1;
+      display:inline-flex;align-items:center;gap:8px;
+      background:var(--green-bright);color:var(--green-deep);
+      font-family:'DM Sans',sans-serif;font-size:16px;font-weight:600;
+      padding:14px 36px;border-radius:10px;text-decoration:none;border:none;cursor:pointer;
+      transition:background .2s,transform .2s,box-shadow .2s;
+      opacity:0;animation:fadeUp .7s .9s forwards;
+    }
+    .btn-try:hover{background:var(--green-glow);transform:translateY(-3px);box-shadow:0 10px 28px rgba(76,175,80,0.4)}
+
+    /* HOW IT WORKS */
+    .how-section{
+      position:relative;z-index:1;
+      background:var(--green-dark);
+      border-top:1px solid var(--glass-border);
+      border-bottom:1px solid var(--glass-border);
+      padding:4rem 2rem;text-align:center;
+    }
+    .how-section h2{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;color:var(--text-main);margin-bottom:3rem}
+    .how-steps{display:flex;justify-content:center;gap:3rem;flex-wrap:wrap;max-width:800px;margin:0 auto}
+    .how-step{flex:1;min-width:180px;max-width:220px;text-align:center}
+    .how-icon{
+      width:72px;height:72px;border-radius:50%;
+      background:rgba(76,175,80,0.12);border:1px solid var(--glass-border);
+      display:flex;align-items:center;justify-content:center;
+      font-size:30px;margin:0 auto 1rem;
+      transition:background .3s,transform .3s;
+    }
+    .how-step:hover .how-icon{background:rgba(76,175,80,0.22);transform:scale(1.08)}
+    .step-num{
+      width:28px;height:28px;border-radius:50%;
+      background:var(--green-bright);color:var(--green-deep);
+      font-size:13px;font-weight:700;
+      display:flex;align-items:center;justify-content:center;
+      margin:0 auto .8rem;
+    }
+    .how-step h4{font-size:16px;font-weight:600;color:var(--text-main);margin-bottom:6px}
+    .how-step p{font-size:13px;color:var(--text-muted);line-height:1.6;font-weight:300}
+
+    /* MAIN TOOL SECTION */
+    .tool-section{
+      position:relative;z-index:1;
+      max-width:980px;margin:3rem auto;padding:0 1.5rem 4rem;
+    }
+    .tool-head{text-align:center;margin-bottom:2.5rem}
+    .tool-head .tag{display:inline-block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--green-bright);font-weight:500;margin-bottom:10px}
+    .tool-head h2{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,3vw,2.2rem);font-weight:700;color:var(--text-main)}
+
+    .main-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+
+    /* CARDS */
+    .card{
+      background:var(--glass-bg);border:1px solid var(--glass-border);
+      backdrop-filter:blur(18px);border-radius:20px;padding:2rem;
+    }
+    .card h2{
+      font-family:'Playfair Display',serif;font-size:19px;font-weight:700;
+      color:var(--text-main);margin-bottom:1.6rem;
+      padding-bottom:1rem;border-bottom:1px solid var(--glass-border);
+    }
+
+    /* UPLOAD AREA */
+    .upload-area{
+      border:2px dashed var(--glass-border);border-radius:14px;
+      padding:2.5rem 1rem;text-align:center;cursor:pointer;
+      transition:border-color .25s,background .25s;margin-bottom:1.2rem;
+      background:rgba(76,175,80,0.03);
+    }
+    .upload-area:hover{border-color:var(--green-bright);background:rgba(76,175,80,0.07)}
+    .upload-area .upload-icon{font-size:44px;margin-bottom:10px;display:block}
+    .upload-area p{font-size:14px;color:var(--text-muted);margin-bottom:4px}
+    .upload-area span{font-size:12px;color:rgba(138,170,140,0.6)}
+    .upload-area input{display:none}
+
+    #previewImg{width:100%;border-radius:12px;margin-bottom:1.2rem;display:none;max-height:220px;object-fit:cover;border:1px solid var(--glass-border)}
+
+    /* FORM ELEMENTS */
+    .form-group{margin-bottom:1.2rem}
+    .form-group label{display:block;font-size:12px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px}
+    .form-group select{
+      width:100%;padding:11px 14px;
+      background:rgba(13,31,15,0.7);border:1px solid var(--glass-border);
+      border-radius:10px;font-size:14px;color:var(--text-main);
+      font-family:'DM Sans',sans-serif;outline:none;
+      transition:border-color .25s,box-shadow .25s;
+      appearance:none;-webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238aaa8c' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;
+    }
+    .form-group select option{background:var(--green-dark);color:var(--text-main)}
+    .form-group select:focus{border-color:var(--green-bright);box-shadow:0 0 0 3px rgba(76,175,80,0.12)}
+
+    .btn-detect{
+      width:100%;background:var(--green-bright);color:var(--green-deep);
+      border:none;padding:13px;border-radius:10px;
+      font-size:15px;font-weight:600;cursor:pointer;
+      font-family:'DM Sans',sans-serif;
+      position:relative;overflow:hidden;
+      transition:background .2s,transform .15s,box-shadow .2s;
+    }
+    .btn-detect::after{
+      content:'';position:absolute;inset:0;
+      background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.2) 50%,transparent 70%);
+      transform:translateX(-100%);transition:transform .5s;
+    }
+    .btn-detect:hover{background:var(--green-glow);transform:translateY(-2px);box-shadow:0 8px 24px rgba(76,175,80,0.35)}
+    .btn-detect:hover::after{transform:translateX(100%)}
+
+    /* RESULT */
+    .empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted)}
+    .empty-state .icon{font-size:48px;margin-bottom:1rem;opacity:.6;display:block}
+    .empty-state p{font-size:14px;font-weight:300}
+
+    .result-content{display:none;flex-direction:column;gap:1.4rem}
+
+    .disease-banner{border-radius:14px;padding:1.5rem;text-align:center;position:relative;overflow:hidden}
+    .disease-banner::before{content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(255,255,255,0.06),transparent 70%);pointer-events:none}
+    .d-icon{font-size:44px;margin-bottom:10px;display:block;animation:iconBounce .6s ease}
+    @keyframes iconBounce{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+    .disease-banner h3{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;margin-bottom:5px}
+    .disease-banner p{font-size:13px;font-weight:300}
+
+    .banner-red   {background:rgba(239,68,68,0.12);border:1px solid rgba(239,68,68,0.25)}
+    .banner-red h3,.banner-red p{color:#fca5a5}
+    .banner-green {background:rgba(76,175,80,0.12);border:1px solid rgba(76,175,80,0.25)}
+    .banner-green h3,.banner-green p{color:var(--green-glow)}
+    .banner-yellow{background:rgba(232,168,56,0.12);border:1px solid rgba(232,168,56,0.25)}
+    .banner-yellow h3,.banner-yellow p{color:#fcd34d}
+
+    .severity-bar{margin-top:14px}
+    .severity-bar .label{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+    .bar-bg{background:rgba(255,255,255,0.08);border-radius:20px;height:6px;overflow:hidden}
+    .bar-fill-red   {background:linear-gradient(90deg,#ef4444,#fca5a5);height:100%;border-radius:20px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+    .bar-fill-green {background:linear-gradient(90deg,var(--green-accent),var(--green-glow));height:100%;border-radius:20px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+    .bar-fill-yellow{background:linear-gradient(90deg,#d97706,#fcd34d);height:100%;border-radius:20px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+
+    .info-box{
+      background:rgba(255,255,255,0.04);border:1px solid var(--glass-border);
+      border-radius:12px;padding:1.1rem 1.2rem;
+    }
+    .info-box h4{font-size:13px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px}
+    .info-box p{font-size:14px;color:var(--text-main);line-height:1.65;font-weight:300}
+
+    .treatment-box{
+      background:rgba(76,175,80,0.08);border:1px solid rgba(76,175,80,0.2);
+      border-radius:12px;padding:1.1rem 1.2rem;
+    }
+    .treatment-box h4{font-size:13px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--green-bright);margin-bottom:10px}
+    .treatment-list{list-style:none;padding:0}
+    .treatment-list li{
+      font-size:14px;color:var(--text-main);font-weight:300;
+      padding:6px 0;border-bottom:1px solid rgba(76,175,80,0.12);
+      display:flex;align-items:flex-start;gap:8px;
+    }
+    .treatment-list li:last-child{border-bottom:none}
+    .treatment-list li::before{content:"✓";color:var(--green-glow);font-weight:700;flex-shrink:0;margin-top:1px}
+
+    /* COMMON DISEASES */
+    .diseases-section{
+      position:relative;z-index:1;
+      max-width:980px;margin:0 auto 4rem;padding:0 1.5rem;
+    }
+    .diseases-section h2{
+      font-family:'Playfair Display',serif;font-size:clamp(1.4rem,2.5vw,2rem);
+      font-weight:700;color:var(--text-main);margin-bottom:1.4rem;
+    }
+    .disease-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+    .disease-card{
+      background:var(--glass-bg);border:1px solid var(--glass-border);
+      backdrop-filter:blur(12px);border-radius:14px;padding:1.3rem;cursor:pointer;
+      transition:transform .25s,border-color .25s,box-shadow .25s;
+      position:relative;overflow:hidden;
+    }
+    .disease-card::before{
+      content:'';position:absolute;top:0;left:-100%;width:60%;height:100%;
+      background:linear-gradient(120deg,transparent,rgba(255,255,255,0.04),transparent);
+      transition:left .5s;
+    }
+    .disease-card:hover{transform:translateY(-5px);border-color:rgba(76,175,80,0.35);box-shadow:0 12px 32px rgba(0,0,0,0.35)}
+    .disease-card:hover::before{left:140%}
+    .d-emoji{font-size:28px;margin-bottom:8px;display:block}
+    .disease-card h4{font-size:14px;font-weight:500;color:var(--text-main);margin-bottom:4px}
+    .disease-card p{font-size:12px;color:var(--text-muted);line-height:1.5;font-weight:300}
+    .badge{display:inline-block;font-size:11px;font-weight:500;padding:3px 10px;border-radius:20px;margin-top:8px}
+    .badge-red   {background:rgba(239,68,68,0.15);color:#fca5a5;border:1px solid rgba(239,68,68,0.2)}
+    .badge-yellow{background:rgba(232,168,56,0.15);color:#fcd34d;border:1px solid rgba(232,168,56,0.2)}
+    .badge-green {background:rgba(76,175,80,0.15);color:var(--green-glow);border:1px solid rgba(76,175,80,0.2)}
+
+    /* FOOTER */
+    footer{position:relative;z-index:1;text-align:center;padding:1.5rem;border-top:1px solid var(--glass-border);background:var(--green-dark)}
+    footer p{font-size:13px;color:var(--text-muted);font-weight:300}
+
+    /* REVEAL */
+    .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+    .reveal.visible{opacity:1;transform:translateY(0)}
+    .stagger>*{opacity:0;transform:translateY(28px);transition:opacity .6s,transform .6s}
+    .stagger.visible>*:nth-child(1){opacity:1;transform:none;transition-delay:.0s}
+    .stagger.visible>*:nth-child(2){opacity:1;transform:none;transition-delay:.12s}
+    .stagger.visible>*:nth-child(3){opacity:1;transform:none;transition-delay:.24s}
+    .stagger.visible>*:nth-child(4){opacity:1;transform:none;transition-delay:.36s}
+    .stagger.visible>*:nth-child(5){opacity:1;transform:none;transition-delay:.48s}
+    .stagger.visible>*:nth-child(6){opacity:1;transform:none;transition-delay:.60s}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+    @media(max-width:650px){
+      .main-grid{grid-template-columns:1fr}
+      nav{padding:0 1.2rem}
+      .nav-links{gap:1rem}
+      .how-steps{gap:1.5rem}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="navbar">
+    <a class="logo" href="/"><div class="logo-icon">🌾</div>KrishiMitra</a>
+    <div class="nav-links">
+      <!-- ✅ data-lang added to all nav links -->
+      <a href="/" data-lang="nav_home">Home</a>
+      <a href="/crop" data-lang="nav_crop">Crop</a>
+      <a href="/weather" data-lang="nav_weather">Weather</a>
+      <a href="/disease" class="active" data-lang="nav_disease">Disease</a>
+      <a href="/market" data-lang="nav_market">Market</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-tag">AI Powered</div>
+    <!-- ✅ data-lang added to h1 and p -->
+    <h1>Try our AI Powered<br><span data-lang="disease_title">Disease Detection</span></h1>
+    <p data-lang="disease_sub">Upload a photo of your plant — AI will detect the disease instantly and give you treatment steps</p>
+    <a class="btn-try" href="#tool">📷 Try Now</a>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <div class="how-section">
+    <h2>How it works?</h2>
+    <div class="how-steps stagger">
+      <div class="how-step">
+        <div class="how-icon">📱</div>
+        <div class="step-num">1</div>
+        <h4>Click a Pic</h4>
+        <p>Take a picture of your plant leaf</p>
+      </div>
+      <div class="how-step">
+        <div class="how-icon">☁️</div>
+        <div class="step-num">2</div>
+        <h4>Upload on KrishiMitra</h4>
+        <p>Visit KrishiMitra on your device and click on Try Now to upload your picture</p>
+      </div>
+      <div class="how-step">
+        <div class="how-icon">📋</div>
+        <div class="step-num">3</div>
+        <h4>Get final Report</h4>
+        <p>AI will analyze your plant and display a detailed report for you</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN TOOL -->
+  <div class="tool-section" id="tool">
+    <div class="tool-head reveal">
+      <div class="tag">Detection Tool</div>
+      <h2>🍃 Plant Disease Detection</h2>
+    </div>
+    <div class="main-grid">
+
+      <!-- Upload Form -->
+      <div class="card reveal">
+        <!-- ✅ data-lang added to card title -->
+        <h2 data-lang="disease_upload">Upload Plant Photo</h2>
+
+        <div class="upload-area" id="uploadArea">
+          <span class="upload-icon">📷</span>
+          <!-- ✅ data-lang added to upload text -->
+          <p data-lang="disease_click">Click to upload or drag & drop</p>
+          <span>Supports JPG, PNG, WEBP</span>
+          <input type="file" id="fileInput" accept="image/*"/>
+        </div>
+
+        <img id="previewImg" src="" alt="Preview"/>
+
+        <div class="form-group">
+          <!-- ✅ data-lang added to labels -->
+          <label data-lang="disease_plant">Plant / Crop Type</label>
+          <select id="plantType">
+            <option value="">-- Select plant --</option>
+            <option value="rice">Rice (Paddy)</option>
+            <option value="wheat">Wheat</option>
+            <option value="tomato">Tomato</option>
+            <option value="potato">Potato</option>
+            <option value="cotton">Cotton</option>
+            <option value="maize">Maize (Corn)</option>
+            <option value="sugarcane">Sugarcane</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label data-lang="disease_part">Affected Part</label>
+          <select id="affectedPart">
+            <option value="">-- Select part --</option>
+            <option value="leaf">Leaf</option>
+            <option value="stem">Stem</option>
+            <option value="root">Root</option>
+            <option value="fruit">Fruit / Grain</option>
+            <option value="whole">Whole Plant</option>
+          </select>
+        </div>
+
+        <!-- ✅ data-lang added to detect button -->
+        <button class="btn-detect" id="detectBtn" data-lang="disease_btn">🔍 Detect Disease</button>
+      </div>
+
+      <!-- Result -->
+      <div class="card reveal">
+        <!-- ✅ data-lang added to result card title and empty state -->
+        <h2 data-lang="disease_result">Detection Result</h2>
+        <div class="empty-state" id="emptyState">
+          <span class="icon">🤖</span>
+          <p data-lang="disease_empty">Upload a photo and select crop type to detect disease</p>
+        </div>
+        <div class="result-content" id="resultContent">
+          <div class="disease-banner" id="diseaseBanner">
+            <span class="d-icon" id="diseaseIcon">🍃</span>
+            <h3 id="diseaseName">-</h3>
+            <p id="diseaseDesc">-</p>
+            <div class="severity-bar">
+              <div class="label">
+                <span>Severity Level</span>
+                <span id="severityText">-</span>
+              </div>
+              <div class="bar-bg"><div id="severityBar" class="bar-fill-red"></div></div>
+            </div>
+          </div>
+          <div class="info-box">
+            <h4>📋 About this Disease</h4>
+            <p id="diseaseInfo">-</p>
+          </div>
+          <div class="treatment-box">
+            <h4>💊 Treatment Steps</h4>
+            <ul class="treatment-list" id="treatmentList"></ul>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- COMMON DISEASES -->
+  <div class="diseases-section">
+    <h2>Common Plant Diseases</h2>
+    <div class="disease-grid stagger">
+      <div class="disease-card">
+        <span class="d-emoji">🟫</span>
+        <h4>Leaf Blight</h4>
+        <p>Brown patches on leaves, common in rice and wheat</p>
+        <span class="badge badge-red">High Risk</span>
+      </div>
+      <div class="disease-card">
+        <span class="d-emoji">⚫</span>
+        <h4>Powdery Mildew</h4>
+        <p>White powdery coating on leaves and stems</p>
+        <span class="badge badge-yellow">Medium Risk</span>
+      </div>
+      <div class="disease-card">
+        <span class="d-emoji">🟡</span>
+        <h4>Yellow Rust</h4>
+        <p>Yellow stripes on wheat leaves, spreads fast</p>
+        <span class="badge badge-red">High Risk</span>
+      </div>
+      <div class="disease-card">
+        <span class="d-emoji">🟤</span>
+        <h4>Root Rot</h4>
+        <p>Roots turn brown and soft, plant wilts suddenly</p>
+        <span class="badge badge-red">High Risk</span>
+      </div>
+      <div class="disease-card">
+        <span class="d-emoji">🔴</span>
+        <h4>Tomato Blight</h4>
+        <p>Dark spots on tomato leaves and fruit</p>
+        <span class="badge badge-yellow">Medium Risk</span>
+      </div>
+      <div class="disease-card">
+        <span class="d-emoji">🟢</span>
+        <h4>Healthy Plant</h4>
+        <p>No disease detected — plant looks good!</p>
+        <span class="badge badge-green">No Risk</span>
+      </div>
+    </div>
+  </div>
+
+  <footer><p>KrishiMitra — Smart Farming for India | Final Year Project 2026</p></footer>
+
+  <script>
+    /* NAV scroll */
+    window.addEventListener('scroll',function(){
+      document.getElementById('navbar').classList.toggle('scrolled',scrollY>40);
+    },{passive:true});
+
+    /* Scroll reveal */
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if(e.isIntersecting){e.target.classList.add('visible');io.unobserve(e.target);}
+      });
+    },{threshold:.14});
+    document.querySelectorAll('.reveal,.stagger').forEach(function(el){io.observe(el);});
+
+    /* Disease Data */
+    var diseaseData = {
+      "rice": {
+        "leaf":  { name:"Rice Leaf Blight",  icon:"🟫", type:"red",    desc:"Bacterial leaf blight detected on rice plant",           severity:75, severityLabel:"High — 75%",   info:"Bacterial Leaf Blight is caused by Xanthomonas oryzae. It causes yellowing and wilting of leaves, starting from the tips. Spreads rapidly in humid conditions.", treatment:["Apply Copper Oxychloride spray immediately","Remove and destroy infected leaves","Avoid waterlogging in the field","Use resistant rice varieties next season","Apply Streptomycin sulfate if severe"] },
+        "stem":  { name:"Stem Rot",          icon:"⬛", type:"red",    desc:"Fungal stem rot detected — act immediately",             severity:85, severityLabel:"Severe — 85%", info:"Stem rot is caused by Sclerotium oryzae fungus. The stem turns black and plant lodges. Very common during high humidity seasons.", treatment:["Drain the field and let it dry","Apply Carbendazim fungicide","Remove infected plants carefully","Avoid dense planting next time","Use certified disease-free seeds"] },
+        "fruit": { name:"Rice Blast",        icon:"💥", type:"yellow", desc:"Rice blast fungus detected on grains",                   severity:60, severityLabel:"Medium — 60%", info:"Rice blast caused by Magnaporthe oryzae affects grains and causes significant yield loss. Diamond-shaped lesions appear on leaves and grains.", treatment:["Spray Tricyclazole fungicide","Ensure proper field drainage","Avoid excess nitrogen fertilizer","Plant blast-resistant varieties","Monitor crop regularly"] }
+      },
+      "wheat": {
+        "leaf":  { name:"Yellow Rust",       icon:"🟡", type:"yellow", desc:"Yellow rust (stripe rust) detected on wheat",            severity:65, severityLabel:"Medium — 65%", info:"Yellow rust is caused by Puccinia striiformis. It appears as yellow stripes along the leaf veins and can cause up to 70% yield loss if untreated.", treatment:["Apply Propiconazole fungicide","Spray early morning for best results","Remove severely infected plants","Monitor surrounding fields","Use rust-resistant wheat varieties"] },
+        "stem":  { name:"Stem Rust",         icon:"🟤", type:"red",    desc:"Stem rust detected — high severity",                    severity:80, severityLabel:"High — 80%",   info:"Stem rust caused by Puccinia graminis is one of the most destructive wheat diseases. Reddish-brown pustules appear on stems and leaves.", treatment:["Apply Mancozeb + Carbendazim mix","Spray at 10-day intervals","Destroy crop residue after harvest","Use certified resistant seeds","Report to local agriculture office"] }
+      },
+      "tomato": {
+        "leaf":  { name:"Early Blight",      icon:"🔴", type:"yellow", desc:"Early blight fungal disease detected",                  severity:55, severityLabel:"Medium — 55%", info:"Early blight caused by Alternaria solani shows dark brown spots with concentric rings on older leaves. Spreads in warm, humid conditions.", treatment:["Remove infected lower leaves","Apply Chlorothalonil fungicide","Water at base, avoid wetting leaves","Ensure good air circulation","Rotate crops next season"] },
+        "fruit": { name:"Tomato Blight",     icon:"⚫", type:"red",    desc:"Late blight detected on tomato fruit",                  severity:78, severityLabel:"High — 78%",   info:"Late blight caused by Phytophthora infestans affects both leaves and fruits. Dark water-soaked patches appear on fruits which rot quickly.", treatment:["Apply Metalaxyl + Mancozeb spray","Remove and destroy infected fruits","Avoid overhead irrigation","Increase plant spacing","Apply preventive fungicide spray weekly"] }
+      },
+      "potato": {
+        "leaf":  { name:"Potato Late Blight",icon:"🟤", type:"red",    desc:"Late blight detected — highly contagious",              severity:82, severityLabel:"Severe — 82%", info:"Potato late blight by Phytophthora infestans is the same pathogen that caused the Irish Potato Famine. Very destructive in cool, wet weather.", treatment:["Apply Cymoxanil + Mancozeb immediately","Destroy all infected plant material","Hill up soil around stems","Avoid working in field when wet","Harvest early if infection is severe"] },
+        "root":  { name:"Black Scurf",       icon:"⬛", type:"yellow", desc:"Black scurf (Rhizoctonia) on potato roots",             severity:50, severityLabel:"Medium — 50%", info:"Black scurf caused by Rhizoctonia solani creates black patches on potato tubers and can cause seedling damping-off.", treatment:["Use certified disease-free seed tubers","Treat seed with Carbendazim before planting","Avoid planting in cold, wet soil","Ensure proper soil drainage","Rotate with non-host crops"] }
+      },
+      "cotton": {
+        "leaf":  { name:"Cotton Leaf Curl",  icon:"🌿", type:"red",    desc:"Cotton leaf curl virus detected",                       severity:70, severityLabel:"High — 70%",   info:"Cotton Leaf Curl Disease (CLCuD) is a viral disease transmitted by whiteflies. Leaves curl upward and plant growth is stunted.", treatment:["Control whitefly with Imidacloprid","Remove and destroy infected plants","Plant virus-resistant cotton varieties","Use yellow sticky traps for whitefly","Avoid late sowing"] }
+      },
+      "maize": {
+        "leaf":  { name:"Maize Leaf Blight", icon:"🌽", type:"yellow", desc:"Northern corn leaf blight detected",                    severity:58, severityLabel:"Medium — 58%", info:"Northern corn leaf blight caused by Exserohilum turcicum shows long, cigar-shaped gray-green lesions on maize leaves.", treatment:["Apply Propiconazole fungicide","Remove infected lower leaves","Ensure proper plant spacing","Use resistant maize hybrids","Avoid excess nitrogen application"] }
+      },
+      "sugarcane": {
+        "stem":  { name:"Red Rot Disease",   icon:"🎋", type:"red",    desc:"Red rot fungal disease detected in sugarcane",          severity:76, severityLabel:"High — 76%",   info:"Red rot caused by Colletotrichum falcatum is the most serious disease of sugarcane. Internal tissue turns red with white patches.", treatment:["Destroy infected stools immediately","Use disease-free planting material","Treat setts with Carbendazim solution","Avoid ratoon crop from infected fields","Plant resistant sugarcane varieties"] }
+      }
+    };
+
+    document.getElementById("uploadArea").addEventListener("click",function(){
+      document.getElementById("fileInput").click();
+    });
+
+    document.getElementById("fileInput").addEventListener("change",function(e){
+      var file=e.target.files[0];
+      if(file){
+        var reader=new FileReader();
+        reader.onload=function(ev){
+          var img=document.getElementById("previewImg");
+          img.src=ev.target.result; img.style.display="block";
+          document.getElementById("uploadArea").style.display="none";
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    document.getElementById("detectBtn").addEventListener("click",function(){
+      var plant=document.getElementById("plantType").value;
+      var part=document.getElementById("affectedPart").value;
+      if(!plant||!part){alert("Please select Plant Type and Affected Part!");return;}
+      var plantDiseases=diseaseData[plant];
+      if(!plantDiseases){alert("Data for this plant is not available yet.");return;}
+      var data=plantDiseases[part];
+      if(!data){
+        data={name:"No Disease Detected",icon:"✅",type:"green",desc:"Your plant appears to be healthy!",severity:5,severityLabel:"Healthy — 5%",info:"No significant disease symptoms detected. Keep monitoring your crop regularly and maintain good farming practices.",treatment:["Continue regular watering schedule","Apply balanced NPK fertilizer","Monitor for any new symptoms","Maintain proper field hygiene","Keep records of crop health"]};
+      }
+      document.getElementById("emptyState").style.display="none";
+      var rc=document.getElementById("resultContent");
+      rc.style.display="flex"; rc.style.flexDirection="column"; rc.style.gap="1.4rem";
+      var banner=document.getElementById("diseaseBanner");
+      banner.className="disease-banner banner-"+data.type;
+      document.getElementById("diseaseIcon").textContent=data.icon;
+      document.getElementById("diseaseName").textContent=data.name;
+      document.getElementById("diseaseDesc").textContent=data.desc;
+      document.getElementById("severityText").textContent=data.severityLabel;
+      document.getElementById("diseaseInfo").textContent=data.info;
+      var bar=document.getElementById("severityBar");
+      bar.className="bar-fill-"+data.type; bar.style.width="0%";
+      setTimeout(function(){bar.style.width=data.severity+"%";},100);
+      var tList=document.getElementById("treatmentList");
+      tList.innerHTML="";
+      for(var i=0;i<data.treatment.length;i++){
+        var li=document.createElement("li"); li.textContent=data.treatment[i]; tList.appendChild(li);
+      }
+    });
+  </script>
+</body>
+</html>

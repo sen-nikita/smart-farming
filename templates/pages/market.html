@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Market Prices — KrishiMitra</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function() { console.log('SW registered'); })
+        .catch(function(err) { console.log('SW error:', err); });
+    }
+  </script>
+  <!-- lang.js already present in market.html -->
+  <script src="/static/lang.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green-deep:#0d1f0f;--green-dark:#122a14;--green-mid:#1a3d1c;
+      --green-accent:#2d6a30;--green-bright:#4caf50;--green-glow:#6fcf72;
+      --amber:#e8a838;--text-main:#eef4ee;--text-muted:#8aaa8c;
+      --glass-bg:rgba(13,31,15,0.6);--glass-border:rgba(76,175,80,0.18);
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;background:var(--green-deep);color:var(--text-main);min-height:100vh;overflow-x:hidden}
+    body::before{
+      content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      opacity:0.4;
+    }
+
+    /* NAV */
+    nav{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 3rem;height:64px;
+      background:rgba(13,31,15,0.2);backdrop-filter:blur(12px);
+      border-bottom:1px solid rgba(76,175,80,0.1);
+      transition:background .4s,border-color .4s;
+    }
+    nav.scrolled{background:rgba(13,31,15,0.92);border-bottom-color:var(--glass-border)}
+    .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;text-decoration:none;display:flex;align-items:center;gap:8px}
+    .logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--green-accent),var(--green-bright));display:flex;align-items:center;justify-content:center;font-size:16px;transition:transform .3s}
+    .logo:hover .logo-icon{transform:rotate(-10deg) scale(1.1)}
+    .nav-links{display:flex;gap:2rem;align-items:center}
+    .nav-links a{font-size:14px;color:rgba(255,255,255,0.75);text-decoration:none;position:relative;transition:color .2s}
+    .nav-links a::after{content:'';position:absolute;bottom:-3px;left:0;right:0;height:1px;background:var(--green-glow);transform:scaleX(0);transform-origin:left;transition:transform .25s}
+    .nav-links a:hover{color:#fff}
+    .nav-links a:hover::after{transform:scaleX(1)}
+    .nav-links a.active{color:var(--green-glow)}
+    .nav-links a.active::after{transform:scaleX(1)}
+
+    /* HERO */
+    .hero{
+      position:relative;min-height:60vh;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;
+      text-align:center;padding:0 2rem;overflow:hidden;
+    }
+    .hero-bg{
+      position:absolute;inset:0;z-index:0;
+      background:
+        linear-gradient(180deg,rgba(5,15,6,0.6) 0%,rgba(5,15,6,0.78) 100%),
+        url('https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=1600&q=80') center/cover no-repeat;
+      transform:scale(1.04);animation:bgZoom 14s ease-out forwards;
+    }
+    @keyframes bgZoom{to{transform:scale(1)}}
+    .hero-bg::after{content:'';position:absolute;bottom:0;left:0;right:0;height:180px;background:linear-gradient(to bottom,transparent,var(--green-deep))}
+    .hero-tag{position:relative;z-index:1;display:inline-block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--green-glow);font-weight:500;margin-bottom:1rem;opacity:0;animation:fadeUp .7s .3s forwards}
+    .hero h1{position:relative;z-index:1;font-family:'Playfair Display',serif;font-size:clamp(2.2rem,5vw,3.6rem);font-weight:700;color:#fff;line-height:1.15;margin-bottom:1rem;opacity:0;animation:fadeUp .7s .5s forwards}
+    .hero h1 span{color:var(--green-glow)}
+    .hero p{position:relative;z-index:1;font-size:16px;color:rgba(255,255,255,0.65);font-weight:300;max-width:480px;line-height:1.7;opacity:0;animation:fadeUp .7s .7s forwards}
+
+    /* LIVE TICKER */
+    .ticker-wrap{
+      position:relative;z-index:1;
+      background:rgba(13,31,15,0.85);backdrop-filter:blur(12px);
+      border-top:1px solid var(--glass-border);border-bottom:1px solid var(--glass-border);
+      padding:.7rem 0;overflow:hidden;white-space:nowrap;
+    }
+    .ticker-track{
+      display:inline-block;
+      animation:tickerScroll 30s linear infinite;
+    }
+    .ticker-track:hover{animation-play-state:paused}
+    @keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+    .ticker-item{
+      display:inline-flex;align-items:center;gap:6px;
+      margin-right:2.5rem;font-size:13px;font-weight:400;
+    }
+    .t-up{color:var(--green-glow)}
+    .t-down{color:#fca5a5}
+    .t-flat{color:var(--text-muted)}
+    .t-name{color:var(--text-main);font-weight:500}
+
+    /* MAIN */
+    .main{position:relative;z-index:1;max-width:1000px;margin:2.5rem auto;padding:0 1.5rem 4rem}
+
+    /* FILTERS */
+    .filters{
+      display:flex;gap:10px;flex-wrap:wrap;margin-bottom:2rem;
+      background:var(--glass-bg);backdrop-filter:blur(18px);
+      border:1px solid var(--glass-border);border-radius:14px;
+      padding:1.2rem 1.4rem;
+      opacity:0;animation:fadeUp .7s .8s forwards;
+    }
+    .filters select{
+      padding:9px 14px;background:rgba(13,31,15,0.8);
+      border:1px solid var(--glass-border);border-radius:10px;
+      font-size:14px;color:var(--text-main);
+      font-family:'DM Sans',sans-serif;outline:none;
+      transition:border-color .2s;
+      appearance:none;-webkit-appearance:none;
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238aaa8c' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 12px center;padding-right:34px;
+    }
+    .filters select option{background:var(--green-dark)}
+    .filters select:focus{border-color:var(--green-bright)}
+    .filters button{
+      padding:9px 22px;border:none;border-radius:10px;
+      font-size:14px;font-weight:500;cursor:pointer;
+      font-family:'DM Sans',sans-serif;
+      transition:background .2s,transform .15s;
+    }
+    #filterBtn{background:var(--green-bright);color:var(--green-deep)}
+    #filterBtn:hover{background:var(--green-glow);transform:translateY(-1px)}
+    #resetBtn{background:rgba(255,255,255,0.08);color:var(--text-muted);border:1px solid var(--glass-border)}
+    #resetBtn:hover{background:rgba(255,255,255,0.13);color:var(--text-main)}
+
+    /* SUMMARY CARDS */
+    .summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:14px;margin-bottom:2rem}
+    .summary-card{
+      background:var(--glass-bg);border:1px solid var(--glass-border);
+      backdrop-filter:blur(16px);border-radius:16px;padding:1.3rem;text-align:center;
+      transition:transform .25s,border-color .25s;cursor:default;
+    }
+    .summary-card:hover{transform:translateY(-4px);border-color:rgba(76,175,80,0.35)}
+    .s-icon{font-size:28px;margin-bottom:8px;display:block}
+    .s-val{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--green-glow)}
+    .s-lbl{font-size:12px;color:var(--text-muted);margin-top:3px;font-weight:300}
+
+    /* TABLE CARD */
+    .table-card{
+      background:var(--glass-bg);border:1px solid var(--glass-border);
+      backdrop-filter:blur(18px);border-radius:18px;overflow:hidden;margin-bottom:2rem;
+    }
+    .table-header{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:1.1rem 1.5rem;border-bottom:1px solid var(--glass-border);
+    }
+    .table-header h2{font-family:'Playfair Display',serif;font-size:17px;font-weight:700;color:var(--text-main)}
+    .table-header span{font-size:12px;color:var(--text-muted);font-weight:300}
+
+    table{width:100%;border-collapse:collapse}
+    thead tr{background:rgba(76,175,80,0.06)}
+    th{
+      padding:10px 16px;text-align:left;
+      font-size:11px;font-weight:500;letter-spacing:1px;text-transform:uppercase;
+      color:var(--text-muted);
+    }
+    td{padding:13px 16px;font-size:14px;color:var(--text-main);border-top:1px solid rgba(76,175,80,0.07)}
+    tr:hover td{background:rgba(76,175,80,0.04)}
+
+    .crop-name{display:flex;align-items:center;gap:9px;font-weight:500;color:var(--text-main)}
+    .crop-emoji{font-size:20px}
+    .price{font-family:'Playfair Display',serif;font-weight:700;font-size:15px;color:var(--green-glow)}
+
+    .change{display:inline-flex;align-items:center;gap:4px;font-size:13px;font-weight:500;padding:3px 10px;border-radius:20px}
+    .change-up  {background:rgba(76,175,80,0.15);color:var(--green-glow);border:1px solid rgba(76,175,80,0.2)}
+    .change-down{background:rgba(239,68,68,0.12);color:#fca5a5;border:1px solid rgba(239,68,68,0.18)}
+    .change-flat{background:rgba(255,255,255,0.06);color:var(--text-muted);border:1px solid var(--glass-border)}
+
+    .trend{font-size:18px}
+
+    .market-badge{font-size:11px;padding:3px 10px;border-radius:20px;font-weight:500}
+    .badge-blue  {background:rgba(59,130,246,0.15);color:#93c5fd;border:1px solid rgba(59,130,246,0.2)}
+    .badge-purple{background:rgba(139,92,246,0.15);color:#c4b5fd;border:1px solid rgba(139,92,246,0.2)}
+    .badge-orange{background:rgba(249,115,22,0.15);color:#fdba74;border:1px solid rgba(249,115,22,0.2)}
+
+    /* TIPS */
+    .section-title{font-family:'Playfair Display',serif;font-size:20px;font-weight:700;color:var(--text-main);margin-bottom:1.2rem}
+    .tips-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+    .tip-card{
+      border-radius:14px;padding:1.1rem 1.3rem;
+      display:flex;align-items:flex-start;gap:12px;
+      transition:transform .25s;
+    }
+    .tip-card:hover{transform:translateY(-3px)}
+    .t-icon{font-size:22px;flex-shrink:0;margin-top:2px}
+    .tip-card h4{font-size:14px;font-weight:500;margin-bottom:4px}
+    .tip-card p{font-size:13px;line-height:1.6;font-weight:300}
+    .tip-green {background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.2)}
+    .tip-green h4,.tip-green p{color:var(--green-glow)}
+    .tip-yellow{background:rgba(232,168,56,0.1);border:1px solid rgba(232,168,56,0.2)}
+    .tip-yellow h4,.tip-yellow p{color:#fcd34d}
+    .tip-blue  {background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.2)}
+    .tip-blue h4,.tip-blue p{color:#93c5fd}
+
+    /* FOOTER */
+    footer{position:relative;z-index:1;text-align:center;padding:1.5rem;border-top:1px solid var(--glass-border);background:var(--green-dark)}
+    footer p{font-size:13px;color:var(--text-muted);font-weight:300}
+
+    /* REVEAL */
+    .reveal{opacity:0;transform:translateY(28px);transition:opacity .7s,transform .7s}
+    .reveal.visible{opacity:1;transform:translateY(0)}
+
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+
+    @media(max-width:650px){
+      th:nth-child(4),td:nth-child(4),
+      th:nth-child(5),td:nth-child(5){display:none}
+      nav{padding:0 1.2rem}
+      .nav-links{gap:1rem}
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav id="navbar">
+    <a class="logo" href="/"><div class="logo-icon">🌾</div>KrishiMitra</a>
+    <div class="nav-links">
+      <!-- ✅ data-lang added to all nav links -->
+      <a href="/" data-lang="nav_home">Home</a>
+      <a href="/crop" data-lang="nav_crop">Crop</a>
+      <a href="/weather" data-lang="nav_weather">Weather</a>
+      <a href="/disease" data-lang="nav_disease">Disease</a>
+      <a href="/market" class="active" data-lang="nav_market">Market</a>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-bg"></div>
+    <div class="hero-tag">Live Mandi Rates</div>
+    <!-- ✅ data-lang added to h1 and p -->
+    <h1>💰 <span data-lang="market_title">Market Prices</span></h1>
+    <p data-lang="market_sub">Live mandi rates — sell your crop at the right time and maximise your profit</p>
+  </section>
+
+  <!-- LIVE TICKER -->
+  <div class="ticker-wrap">
+    <div class="ticker-track" id="tickerTrack"></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- FILTERS -->
+    <div class="filters">
+      <select id="stateFilter">
+        <option value="all">All States</option>
+        <option value="Punjab">Punjab</option>
+        <option value="Haryana">Haryana</option>
+        <option value="UP">Uttar Pradesh</option>
+        <option value="Maharashtra">Maharashtra</option>
+        <option value="MP">Madhya Pradesh</option>
+      </select>
+      <select id="categoryFilter">
+        <option value="all">All Categories</option>
+        <option value="Cereal">Cereals</option>
+        <option value="Pulse">Pulses</option>
+        <option value="Vegetable">Vegetables</option>
+        <option value="Cash Crop">Cash Crops</option>
+      </select>
+      <!-- ✅ data-lang added to filter buttons -->
+      <button id="filterBtn" data-lang="market_filter_btn">Filter</button>
+      <button id="resetBtn" data-lang="market_reset_btn">Reset</button>
+    </div>
+
+    <!-- SUMMARY -->
+    <div class="summary-grid reveal">
+      <div class="summary-card">
+        <span class="s-icon">📈</span>
+        <div class="s-val" id="topGainer">Wheat</div>
+        <div class="s-lbl">Top Gainer Today</div>
+      </div>
+      <div class="summary-card">
+        <span class="s-icon">📉</span>
+        <div class="s-val" id="topLoser">Onion</div>
+        <div class="s-lbl">Top Loser Today</div>
+      </div>
+      <div class="summary-card">
+        <span class="s-icon">🌾</span>
+        <div class="s-val">14</div>
+        <div class="s-lbl">Crops Listed</div>
+      </div>
+      <div class="summary-card">
+        <span class="s-icon">🏪</span>
+        <div class="s-val">5</div>
+        <div class="s-lbl">Mandis Covered</div>
+      </div>
+    </div>
+
+    <!-- PRICE TABLE -->
+    <div class="table-card reveal">
+      <div class="table-header">
+        <h2>Crop Prices (per Quintal)</h2>
+        <span id="lastUpdated">Updated: Today, 9:00 AM</span>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Crop</th>
+            <th>Price (₹/Qtl)</th>
+            <th>Change</th>
+            <th>Trend</th>
+            <th>Market</th>
+          </tr>
+        </thead>
+        <tbody id="priceTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- SELLING TIPS -->
+    <!-- ✅ data-lang added to selling tips title -->
+    <div class="section-title reveal">💡 <span data-lang="market_tips">Selling Tips</span></div>
+    <div class="tips-grid reveal">
+      <div class="tip-card tip-green">
+        <div class="t-icon">📈</div>
+        <div>
+          <h4>Best Time to Sell Wheat</h4>
+          <p>Wheat prices are rising this week. Consider selling 50% of your stock now and hold rest for better prices.</p>
+        </div>
+      </div>
+      <div class="tip-card tip-yellow">
+        <div class="t-icon">⚠️</div>
+        <div>
+          <h4>Onion Prices Falling</h4>
+          <p>Onion prices have dropped 8% this week due to excess supply. Wait 2 weeks before selling if possible.</p>
+        </div>
+      </div>
+      <div class="tip-card tip-blue">
+        <div class="t-icon">💡</div>
+        <div>
+          <h4>Rice MSP Update</h4>
+          <p>Government MSP for rice is ₹2,183/quintal. Do not sell below this price — approach your nearest FCI center.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer><p>KrishiMitra — Smart Farming for India | Final Year Project 2026</p></footer>
+
+<script>
+/* NAV scroll */
+window.addEventListener('scroll',function(){
+  document.getElementById('navbar').classList.toggle('scrolled',scrollY>40);
+},{passive:true});
+
+/* Scroll reveal */
+var io=new IntersectionObserver(function(entries){
+  entries.forEach(function(e){
+    if(e.isIntersecting){
+      e.target.classList.add('visible');
+      io.unobserve(e.target);
+    }
+  });
+},{threshold:.1});
+document.querySelectorAll('.reveal').forEach(function(el){io.observe(el);});
+
+/* ================== API DATA ================== */
+var allCrops = [];
+
+var marketBadges = {
+  "Punjab":"badge-blue","Haryana":"badge-purple",
+  "UP":"badge-orange","Maharashtra":"badge-blue","MP":"badge-purple"
+};
+
+/* FETCH API */
+async function loadMarketData(){
+  try{
+    const res = await fetch("https://api.data.gov.in/resource/9ef84268-d588-465a-a308-a864a43d0070?api-key=579b464db66ec23bdd0000016749543897e24ffe6129db10c9b67c03&format=json");
+    const data = await res.json();
+
+    allCrops = data.records.slice(0, 20).map(item => ({
+      emoji: "🌾",
+      name: item.commodity || "Unknown",
+      price: parseInt(item.modal_price) || 0,
+      change: Math.floor(Math.random()*200-100),
+      trend: "📈",
+      market: item.market || "Unknown",
+      category: "Cereal",
+      state: item.state || "Unknown"
+    }));
+
+    buildTicker();
+    renderTable(allCrops);
+
+  }catch(err){
+    console.error("API Error:", err);
+  }
+}
+
+/* ================= TICKER ================= */
+function buildTicker(){
+  var html='';
+  for(var i=0;i<allCrops.length;i++){
+    var c=allCrops[i];
+    var cls=c.change>0?'t-up':c.change<0?'t-down':'t-flat';
+    var arrow=c.change>0?'▲':c.change<0?'▼':'—';
+    html+='<span class="ticker-item"><span class="t-name">'+c.emoji+' '+c.name+'</span>'
+         +'<span class="'+cls+'">₹'+c.price.toLocaleString()+' '+arrow+(c.change!==0?' '+Math.abs(c.change):'')+'</span></span>';
+  }
+  var t=document.getElementById('tickerTrack');
+  t.innerHTML=html+html;
+}
+
+/* ================= TABLE ================= */
+function renderTable(crops){
+  var tbody=document.getElementById("priceTableBody");
+  tbody.innerHTML="";
+
+  if(crops.length===0){
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:2rem;">No crops found.</td></tr>';
+    return;
+  }
+
+  for(var i=0;i<crops.length;i++){
+    var c=crops[i];
+    var changeClass=c.change>0?"change-up":c.change<0?"change-down":"change-flat";
+    var changeText=c.change>0?"▲ +"+c.change:c.change<0?"▼ "+c.change:"— 0";
+    var badgeClass=marketBadges[c.market]||"badge-blue";
+
+    var row=document.createElement("tr");
+    row.innerHTML=
+      '<td><div class="crop-name"><span class="crop-emoji">'+c.emoji+'</span>'+c.name+'</div></td>'+
+      '<td><span class="price">₹'+c.price.toLocaleString()+'</span></td>'+
+      '<td><span class="change '+changeClass+'">'+changeText+'</span></td>'+
+      '<td><span class="trend">'+c.trend+'</span></td>'+
+      '<td><span class="market-badge '+badgeClass+'">'+c.market+'</span></td>';
+
+    tbody.appendChild(row);
+  }
+}
+
+/* ================= FILTER ================= */
+document.getElementById("filterBtn").addEventListener("click",function(){
+  var state=document.getElementById("stateFilter").value;
+  var category=document.getElementById("categoryFilter").value;
+
+  var filtered=allCrops.filter(function(c){
+    return (state==="all"||c.state===state) &&
+           (category==="all"||c.category===category);
+  });
+
+  renderTable(filtered);
+});
+
+document.getElementById("resetBtn").addEventListener("click",function(){
+  document.getElementById("stateFilter").value="all";
+  document.getElementById("categoryFilter").value="all";
+  renderTable(allCrops);
+});
+
+/* ================= LOAD ================= */
+loadMarketData();
+</script>
+</body>
+</html>

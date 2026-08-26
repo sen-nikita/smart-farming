@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Crop Recommendation — KrishiMitra</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function() { console.log('SW registered'); })
+        .catch(function(err) { console.log('SW error:', err); });
+    }
+  </script>
+  <script src="/static/lang.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+    :root{
+      --green-deep:#0d1f0f;--green-dark:#122a14;--green-mid:#1a3d1c;
+      --green-accent:#2d6a30;--green-bright:#4caf50;--green-glow:#6fcf72;
+      --amber:#e8a838;--text-main:#eef4ee;--text-muted:#8aaa8c;
+      --glass-bg:rgba(13,31,15,0.6);--glass-border:rgba(76,175,80,0.18);
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'DM Sans',sans-serif;background:var(--green-deep);color:var(--text-main);min-height:100vh;overflow-x:hidden}
+    body::before{
+      content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+      background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+      opacity:0.4;
+    }
+    nav{
+      position:fixed;top:0;left:0;right:0;z-index:100;
+      display:flex;align-items:center;justify-content:space-between;
+      padding:0 3rem;height:64px;
+      background:rgba(13,31,15,0.88);backdrop-filter:blur(20px);
+      border-bottom:1px solid var(--glass-border);
+    }
+    .logo{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green-glow);text-decoration:none;display:flex;align-items:center;gap:8px}
+    .logo-icon{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--green-accent),var(--green-bright));display:flex;align-items:center;justify-content:center;font-size:16px;transition:transform .3s}
+    .logo:hover .logo-icon{transform:rotate(-10deg) scale(1.1)}
+    .nav-links{display:flex;gap:2rem;align-items:center}
+    .nav-links a{font-size:14px;color:var(--text-muted);text-decoration:none;position:relative;transition:color .2s}
+    .nav-links a::after{content:'';position:absolute;bottom:-3px;left:0;right:0;height:1px;background:var(--green-glow);transform:scaleX(0);transform-origin:left;transition:transform .25s}
+    .nav-links a:hover{color:var(--green-glow)}
+    .nav-links a:hover::after{transform:scaleX(1)}
+    .nav-links a.active{color:var(--green-glow)}
+    .nav-links a.active::after{transform:scaleX(1)}
+    .lang-btn{background:transparent;color:var(--green-glow);border:1px solid rgba(76,175,80,0.4);padding:6px 14px;border-radius:8px;font-size:13px;font-weight:500;cursor:pointer;margin-left:8px;transition:background .2s,border-color .2s}
+    .lang-btn:hover{background:rgba(76,175,80,0.12);border-color:var(--green-glow)}
+    .nav-cta{background:var(--green-accent);color:var(--text-main)!important;padding:8px 20px;border-radius:8px;font-weight:500!important;transition:background .2s,transform .2s!important}
+    .nav-cta::after{display:none!important}
+    .nav-cta:hover{background:var(--green-bright)!important;transform:translateY(-2px)!important}
+
+    .page-header{
+      position:relative;z-index:1;
+      padding:6rem 2rem 3rem;text-align:center;
+      background:linear-gradient(180deg,rgba(13,31,15,0) 0%,rgba(18,42,20,0.6) 100%);
+      border-bottom:1px solid var(--glass-border);
+      opacity:0;animation:fadeUp .7s .2s forwards;
+    }
+    .page-header .tag{display:inline-block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--green-bright);font-weight:500;margin-bottom:10px}
+    .page-header h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:700;color:var(--text-main);margin-bottom:.6rem}
+    .page-header p{font-size:15px;color:var(--text-muted);font-weight:300}
+
+    .main{
+      position:relative;z-index:1;
+      display:grid;grid-template-columns:1fr 1fr;
+      gap:2rem;max-width:980px;margin:2.5rem auto;padding:0 1.5rem 4rem;
+    }
+    .form-card,.result-card{
+      background:var(--glass-bg);border:1px solid var(--glass-border);
+      backdrop-filter:blur(18px);border-radius:20px;padding:2rem;
+      opacity:0;animation:fadeUp .7s forwards;
+    }
+    .form-card{animation-delay:.35s}
+    .result-card{animation-delay:.5s}
+    .form-card h2,.result-card h2{
+      font-family:'Playfair Display',serif;font-size:19px;font-weight:700;
+      color:var(--text-main);margin-bottom:1.6rem;
+      padding-bottom:1rem;border-bottom:1px solid var(--glass-border);
+    }
+    .form-group{margin-bottom:1.2rem}
+    .form-group label{display:block;font-size:12px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:7px}
+    .form-group select,.form-group input{
+      width:100%;padding:11px 14px;
+      background:rgba(13,31,15,0.7);
+      border:1px solid var(--glass-border);
+      border-radius:10px;font-size:14px;color:var(--text-main);
+      font-family:'DM Sans',sans-serif;outline:none;
+      transition:border-color .25s,box-shadow .25s;
+      appearance:none;-webkit-appearance:none;
+    }
+    .form-group select{
+      background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238aaa8c' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat:no-repeat;background-position:right 14px center;
+      padding-right:36px;
+    }
+    .form-group select option{background:var(--green-dark);color:var(--text-main)}
+    .form-group select:focus,.form-group input:focus{border-color:var(--green-bright);box-shadow:0 0 0 3px rgba(76,175,80,0.12)}
+    .form-group input::placeholder{color:var(--text-muted)}
+    .form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .btn-submit{
+      width:100%;background:var(--green-bright);color:var(--green-deep);
+      border:none;padding:13px;border-radius:10px;
+      font-size:15px;font-weight:600;cursor:pointer;margin-top:.5rem;
+      font-family:'DM Sans',sans-serif;letter-spacing:.3px;
+      position:relative;overflow:hidden;
+      transition:background .2s,transform .15s,box-shadow .2s;
+    }
+    .btn-submit::after{content:'';position:absolute;inset:0;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,0.2) 50%,transparent 70%);transform:translateX(-100%);transition:transform .5s}
+    .btn-submit:hover{background:var(--green-glow);transform:translateY(-2px);box-shadow:0 8px 24px rgba(76,175,80,0.35)}
+    .btn-submit:hover::after{transform:translateX(100%)}
+
+    .empty-state{text-align:center;padding:3rem 1rem;color:var(--text-muted)}
+    .empty-state .icon{font-size:48px;margin-bottom:1rem;opacity:.6}
+    .empty-state p{font-size:14px;font-weight:300}
+    .result-content{display:none;flex-direction:column;gap:1.4rem}
+    .top-crop{background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.25);border-radius:14px;padding:1.5rem;text-align:center;position:relative;overflow:hidden}
+    .top-crop::before{content:'';position:absolute;top:-40px;left:50%;transform:translateX(-50%);width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(76,175,80,0.15),transparent 70%);pointer-events:none}
+    .top-crop .crop-icon{font-size:44px;margin-bottom:10px;display:block;animation:iconBounce .6s ease}
+    @keyframes iconBounce{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.15)}100%{transform:scale(1);opacity:1}}
+    .top-crop h3{font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:var(--green-glow);margin-bottom:5px}
+    .top-crop p{font-size:13px;color:var(--text-muted);font-weight:300}
+    .confidence-bar{margin-top:14px}
+    .confidence-bar .label{display:flex;justify-content:space-between;font-size:12px;color:var(--text-muted);margin-bottom:6px}
+    .bar-bg{background:rgba(255,255,255,0.08);border-radius:20px;height:6px;overflow:hidden}
+    .bar-fill{background:linear-gradient(90deg,var(--green-accent),var(--green-glow));height:100%;border-radius:20px;width:0%;transition:width 1.2s cubic-bezier(.4,0,.2,1)}
+    .other-crops h4{font-size:13px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--text-muted);margin-bottom:10px}
+    .crop-pills{display:flex;flex-wrap:wrap;gap:8px}
+    .pill{background:rgba(76,175,80,0.1);border:1px solid rgba(76,175,80,0.25);color:var(--green-glow);font-size:13px;padding:5px 14px;border-radius:20px;transition:background .2s,transform .2s;cursor:default}
+    .pill:hover{background:rgba(76,175,80,0.2);transform:translateY(-2px)}
+    .tips-box{background:rgba(232,168,56,0.08);border:1px solid rgba(232,168,56,0.2);border-radius:12px;padding:1rem 1.2rem}
+    .tips-box h4{font-size:12px;font-weight:500;letter-spacing:.5px;text-transform:uppercase;color:var(--amber);margin-bottom:7px}
+    .tips-box p{font-size:14px;color:#c8a96e;line-height:1.65;font-weight:300}
+
+    footer{position:relative;z-index:1;text-align:center;padding:1.5rem;border-top:1px solid var(--glass-border);background:var(--green-dark)}
+    footer p{font-size:13px;color:var(--text-muted);font-weight:300}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+    @media(max-width:650px){.main{grid-template-columns:1fr}.form-row{grid-template-columns:1fr}nav{padding:0 1.2rem}.nav-links{gap:1rem}}
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="logo" href="/"><div class="logo-icon">🌾</div>KrishiMitra</a>
+    <div class="nav-links">
+      <a href="/" data-lang="nav_home">Home</a>
+      <a href="/crop" class="active" data-lang="nav_crop">Crop</a>
+      <a href="/weather" data-lang="nav_weather">Weather</a>
+      <a href="/disease" data-lang="nav_disease">Disease</a>
+      <a href="/market" data-lang="nav_market">Market</a>
+      <button id="langToggleBtn" class="lang-btn" onclick="toggleLanguage()">🇮🇳 हिंदी</button>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <div class="tag">AI Powered</div>
+    <h1>🌱 <span data-lang="crop_title">Crop Recommendation</span></h1>
+    <p data-lang="crop_sub">Enter your field details — AI will suggest the best crop</p>
+  </div>
+
+  <div class="main">
+    <div class="form-card">
+      <h2 data-lang="crop_form_title">Enter Your Details</h2>
+
+      <div class="form-group">
+  <label data-lang="crop_state">State</label>
+  <select id="state">
+    <option value="" data-lang="opt_select">— Select —</option>
+    <option value="Punjab" data-lang="opt_punjab">Punjab</option>
+    <option value="Haryana" data-lang="opt_haryana">Haryana</option>
+    <option value="Uttar Pradesh" data-lang="opt_up">Uttar Pradesh</option>
+    <option value="Maharashtra" data-lang="opt_mh">Maharashtra</option>
+    <option value="Madhya Pradesh" data-lang="opt_mp">Madhya Pradesh</option>
+    <option value="Rajasthan" data-lang="opt_rj">Rajasthan</option>
+    <option value="Bihar" data-lang="opt_br">Bihar</option>
+    <option value="Gujarat" data-lang="opt_gj">Gujarat</option>
+    <option value="Karnataka" data-lang="opt_ka">Karnataka</option>
+    <option value="Andhra Pradesh" data-lang="opt_ap">Andhra Pradesh</option>
+  </select>
+</div>
+
+<div class="form-group">
+  <label data-lang="crop_soil">Soil Type</label>
+  <select id="soil">
+    <option value="" data-lang="opt_select">— Select —</option>
+    <option value="Alluvial" data-lang="opt_alluvial">Alluvial Soil</option>
+    <option value="Black" data-lang="opt_black">Black Soil</option>
+    <option value="Red" data-lang="opt_red">Red Soil</option>
+    <option value="Sandy" data-lang="opt_sandy">Sandy Soil</option>
+    <option value="Clay" data-lang="opt_clay">Clay Soil</option>
+  </select>
+</div>
+
+<div class="form-group">
+  <label data-lang="crop_season">Season</label>
+  <select id="season">
+    <option value="" data-lang="opt_select">— Select —</option>
+    <option value="Kharif" data-lang="opt_kharif">Kharif (June - November)</option>
+    <option value="Rabi" data-lang="opt_rabi">Rabi (November - April)</option>
+    <option value="Zaid" data-lang="opt_zaid">Zaid (April - June)</option>
+  </select>
+</div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label data-lang="crop_rainfall">Rainfall (mm)</label>
+          <input type="number" id="rainfall" placeholder="e.g. 800"/>
+        </div>
+        <div class="form-group">
+          <label data-lang="crop_temp">Temperature (°C)</label>
+          <input type="number" id="temperature" placeholder="e.g. 25"/>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label data-lang="crop_nitrogen">Nitrogen (N)</label>
+          <input type="number" id="nitrogen" placeholder="e.g. 50"/>
+        </div>
+        <div class="form-group">
+          <label data-lang="crop_ph">pH Level</label>
+          <input type="number" id="ph" placeholder="e.g. 6.5" step="0.1"/>
+        </div>
+      </div>
+
+      <button class="btn-submit" id="searchBtn" data-lang="crop_btn">🔍 Find Best Crop</button>
+    </div>
+
+    <div class="result-card">
+      <h2 data-lang="crop_result_title">AI Recommendation</h2>
+      <div class="empty-state" id="emptyState">
+        <div class="icon">🤖</div>
+        <p data-lang="crop_empty">Fill the form to get AI crop recommendation!</p>
+      </div>
+      <div class="result-content" id="resultContent">
+        <div class="top-crop">
+          <span class="crop-icon" id="cropIcon">🌾</span>
+          <h3 id="cropName">-</h3>
+          <p id="cropDesc">-</p>
+          <div class="confidence-bar">
+            <div class="label">
+              <span>AI Confidence</span>
+              <span id="confidenceText">0%</span>
+            </div>
+            <div class="bar-bg"><div class="bar-fill" id="barFill"></div></div>
+          </div>
+        </div>
+        <div class="other-crops">
+          <h4>More Options</h4>
+          <div class="crop-pills" id="cropPills"></div>
+        </div>
+        <div class="tips-box">
+          <h4>💡 Farmer Tip</h4>
+          <p id="tipText">-</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer><p>KrishiMitra — Smart Farming for India | Final Year Project 2026</p></footer>
+
+  <script>
+    var cropData = {
+      "Kharif": {
+        "Alluvial":{ crop:"Rice (Paddy)",icon:"🌾",confidence:94,others:["Maize","Cotton","Soybean"],tip:"Kharif crops need more water — keep irrigation schedule regular." },
+        "Black":   { crop:"Cotton",icon:"🌿",confidence:91,others:["Soybean","Jowar","Groundnut"],tip:"Black soil is ideal for cotton — maintain NPK balance." },
+        "Red":     { crop:"Groundnut",icon:"🥜",confidence:88,others:["Maize","Millets","Pulses"],tip:"Add organic matter to red soil for better yield." },
+        "Sandy":   { crop:"Pearl Millet (Bajra)",icon:"🌽",confidence:85,others:["Groundnut","Moong","Sesame"],tip:"Use drip irrigation in sandy soil to save water." },
+        "Clay":    { crop:"Rice (Paddy)",icon:"🌾",confidence:90,others:["Jute","Sugarcane","Cotton"],tip:"Avoid waterlogging in clay soil — ensure proper drainage." }
+      },
+      "Rabi": {
+        "Alluvial":{ crop:"Wheat",icon:"🌾",confidence:96,others:["Mustard","Gram","Peas"],tip:"Sow wheat in November for best results in Rabi season." },
+        "Black":   { crop:"Gram (Chana)",icon:"🫘",confidence:92,others:["Wheat","Mustard","Lentils"],tip:"Gram needs less water — rain-fed farming works well." },
+        "Red":     { crop:"Mustard",icon:"🌻",confidence:87,others:["Wheat","Gram","Sunflower"],tip:"Watch out for aphids in mustard — use neem spray." },
+        "Sandy":   { crop:"Barley",icon:"🌾",confidence:83,others:["Mustard","Gram","Potato"],tip:"Barley is drought-resistant — good for sandy soil." },
+        "Clay":    { crop:"Wheat",icon:"🌾",confidence:89,others:["Mustard","Gram","Spinach"],tip:"Do deep ploughing before sowing wheat in clay soil." }
+      },
+      "Zaid": {
+        "Alluvial":{ crop:"Watermelon",icon:"🍉",confidence:90,others:["Cucumber","Moong","Vegetables"],tip:"Zaid season is hot — water crops early morning." },
+        "Black":   { crop:"Moong Dal",icon:"🫘",confidence:86,others:["Urad","Vegetables","Sesame"],tip:"Moong crop is ready in 60-70 days." },
+        "Red":     { crop:"Vegetables",icon:"🥦",confidence:85,others:["Moong","Watermelon","Bitter gourd"],tip:"Vegetable farming in Zaid gives higher income." },
+        "Sandy":   { crop:"Cucumber",icon:"🥒",confidence:84,others:["Watermelon","Moong","Pumpkin"],tip:"Cucumber grows very well in sandy soil." },
+        "Clay":    { crop:"Sugarcane",icon:"🎋",confidence:88,others:["Rice","Vegetables","Maize"],tip:"Clay soil is perfect for sugarcane — expect high yield." }
+      }
+    };
+
+    document.getElementById("searchBtn").addEventListener("click", function() {
+      var state  = document.getElementById("state").value;
+      var soil   = document.getElementById("soil").value;
+      var season = document.getElementById("season").value;
+      if (!state || !soil || !season) {
+        alert("Please select State, Soil and Season!");
+        return;
+      }
+      var data = cropData[season][soil];
+      if (!data) { alert("Data not available for this combination."); return; }
+
+      document.getElementById("emptyState").style.display = "none";
+      var rc = document.getElementById("resultContent");
+      rc.style.display = "flex";
+
+      document.getElementById("cropIcon").textContent       = data.icon;
+      document.getElementById("cropName").textContent       = data.crop;
+      document.getElementById("cropDesc").textContent       = "Best crop for " + state;
+      document.getElementById("confidenceText").textContent = data.confidence + "%";
+      document.getElementById("tipText").textContent        = data.tip;
+
+      document.getElementById("barFill").style.width = "0%";
+      setTimeout(function(){ document.getElementById("barFill").style.width = data.confidence + "%"; }, 100);
+
+      var pillsDiv = document.getElementById("cropPills");
+      pillsDiv.innerHTML = "";
+      data.others.forEach(function(name){
+        var p = document.createElement("span");
+        p.className = "pill"; p.textContent = name;
+        pillsDiv.appendChild(p);
+      });
+    });
+  </script>
+</body>
+</html>

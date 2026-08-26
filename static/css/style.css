@@ -1,0 +1,292 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Segoe UI', sans-serif;
+  background-color: #f9fafb;
+  color: #1a1a1a;
+}
+
+/* NAVBAR */
+nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 2rem;
+  background: #fff;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.logo {
+  font-size: 20px;
+  font-weight: 600;
+  color: #1D9E75;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.nav-links a {
+  font-size: 14px;
+  color: #555;
+  text-decoration: none;
+}
+
+.nav-links a:hover {
+  color: #1D9E75;
+}
+
+/* HERO */
+.hero {
+  text-align: center;
+  padding: 4rem 1.5rem 3rem;
+  background: #fff;
+}
+
+.badge {
+  display: inline-block;
+  background: #EAF3DE;
+  color: #3B6D11;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 5px 16px;
+  border-radius: 20px;
+  margin-bottom: 1.2rem;
+}
+
+.hero h1 {
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin-bottom: 1rem;
+}
+
+.hero h1 span {
+  color: #1D9E75;
+}
+
+.hero p {
+  font-size: 16px;
+  color: #555;
+  max-width: 520px;
+  margin: 0 auto 2rem;
+  line-height: 1.7;
+}
+
+.btn-group {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: #1D9E75;
+  color: #fff;
+  border: none;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-primary:hover {
+  background: #0F6E56;
+}
+
+.btn-secondary {
+  background: transparent;
+  color: #333;
+  border: 1px solid #ccc;
+  padding: 12px 28px;
+  border-radius: 8px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.btn-secondary:hover {
+  border-color: #1D9E75;
+  color: #1D9E75;
+}
+
+/* STATS */
+.stats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  padding: 2rem 1.5rem;
+  background: #f9fafb;
+  border-top: 1px solid #e5e7eb;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.stat { text-align: center; }
+
+.stat-num {
+  font-size: 26px;
+  font-weight: 700;
+  color: #1D9E75;
+}
+
+.stat-label {
+  font-size: 13px;
+  color: #777;
+  margin-top: 4px;
+}
+
+/* FEATURES */
+.features {
+  padding: 3rem 2rem;
+  background: #fff;
+}
+
+.section-title {
+  text-align: center;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.section-sub {
+  text-align: center;
+  font-size: 14px;
+  color: #777;
+  margin-bottom: 2rem;
+}
+
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: box-shadow 0.2s;
+}
+
+.card:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.card-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+.card h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.card p {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+}
+
+/* HOW IT WORKS */
+.how {
+  padding: 3rem 2rem;
+  background: #f0fdf4;
+}
+
+.steps {
+  display: flex;
+  gap: 2rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
+
+.step {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  max-width: 200px;
+}
+
+.step-num {
+  min-width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: #1D9E75;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.step-text h4 {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.step-text p {
+  font-size: 13px;
+  color: #555;
+  line-height: 1.5;
+}
+
+/* CTA */
+.cta-section {
+  padding: 3rem 2rem;
+  background: #fff;
+}
+
+.cta-box {
+  background: #EAF3DE;
+  border-radius: 16px;
+  padding: 2.5rem;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.cta-box h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #085041;
+  margin-bottom: 0.6rem;
+}
+
+.cta-box p {
+  font-size: 14px;
+  color: #3B6D11;
+  margin-bottom: 1.5rem;
+}
+
+/* FOOTER */
+footer {
+  padding: 1.5rem;
+  text-align: center;
+  border-top: 1px solid #e5e7eb;
+  background: #fff;
+}
+
+footer p {
+  font-size: 13px;
+  color: #999;
+}

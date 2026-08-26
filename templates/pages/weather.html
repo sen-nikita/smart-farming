@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Weather Dashboard - KrishiMitra</title>
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <!-- ✅ FIX: lang.js was MISSING in weather.html — now added -->
+  <script src="/static/lang.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js')
+        .then(function() { console.log('SW registered'); })
+        .catch(function(err) { console.log('SW error:', err); });
+    }
+  </script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: #0f1a13;
+      color: #e8f0e9;
+      min-height: 100vh;
+    }
+
+    /* ── NAV ── */
+    nav {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1.1rem 2.5rem;
+      background: rgba(15, 26, 19, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(29, 158, 117, 0.18);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 18px; font-weight: 600;
+      color: #4ade80; text-decoration: none;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .logo-icon {
+      width: 32px; height: 32px; background: #1D9E75;
+      border-radius: 8px; display: flex; align-items: center;
+      justify-content: center; font-size: 16px;
+    }
+    .nav-links { display: flex; gap: 2rem; align-items: center; }
+    .nav-links a {
+      font-size: 14px; color: #9eb89f; text-decoration: none;
+      font-weight: 500; transition: color 0.2s;
+      letter-spacing: 0.02em;
+    }
+    .nav-links a:hover, .nav-links a.active { color: #4ade80; }
+
+    /* ── HERO HEADER ── */
+    .page-header {
+      position: relative;
+      padding: 4rem 2rem 3rem;
+      text-align: center;
+      overflow: hidden;
+    }
+    .page-header::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: radial-gradient(ellipse 70% 60% at 50% 0%, rgba(29,158,117,0.18) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .header-badge {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(29,158,117,0.12); border: 1px solid rgba(29,158,117,0.3);
+      border-radius: 20px; padding: 6px 14px;
+      font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase;
+      color: #4ade80; font-weight: 600; margin-bottom: 1.2rem;
+    }
+    .header-badge span { width: 6px; height: 6px; background: #4ade80; border-radius: 50%; display: inline-block; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.4;} }
+
+    .page-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800; color: #fff;
+      margin-bottom: 0.6rem; line-height: 1.15;
+    }
+    .page-header h1 span { color: #4ade80; }
+    .page-header p { font-size: 15px; color: #7a9e7b; max-width: 450px; margin: 0 auto 2rem; }
+
+    /* ── SEARCH ── */
+    .search-bar {
+      display: flex; gap: 0; max-width: 480px;
+      margin: 0 auto;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(29,158,117,0.3);
+      border-radius: 12px; overflow: hidden;
+      transition: border-color 0.2s;
+    }
+    .search-bar:focus-within { border-color: #1D9E75; }
+    .search-bar input {
+      flex: 1; padding: 13px 18px;
+      background: transparent; border: none;
+      font-size: 14px; color: #e8f0e9;
+      font-family: 'DM Sans', sans-serif; outline: none;
+    }
+    .search-bar input::placeholder { color: #4a6a4a; }
+    .search-bar button {
+      background: #1D9E75; color: #fff; border: none;
+      padding: 13px 22px; font-size: 14px; font-weight: 600;
+      cursor: pointer; font-family: 'DM Sans', sans-serif;
+      transition: background 0.2s; letter-spacing: 0.02em;
+    }
+    .search-bar button:hover { background: #25c490; }
+
+    /* ── MAIN ── */
+    .main { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem 4rem; }
+
+    .loading {
+      text-align: center; padding: 3rem;
+      font-size: 14px; color: #4a6a4a; display: none;
+    }
+    .loading-dot {
+      display: inline-block; width: 8px; height: 8px; background: #1D9E75;
+      border-radius: 50%; margin: 0 3px; animation: bounce 1.4s infinite;
+    }
+    .loading-dot:nth-child(2){ animation-delay: 0.2s; }
+    .loading-dot:nth-child(3){ animation-delay: 0.4s; }
+    @keyframes bounce{ 0%,80%,100%{transform:scale(0.6);} 40%{transform:scale(1);} }
+
+    /* ── CURRENT WEATHER CARD ── */
+    .current-weather {
+      position: relative;
+      background: linear-gradient(135deg, #1a3a2a 0%, #0d2318 50%, #0f2d1f 100%);
+      border: 1px solid rgba(29,158,117,0.25);
+      border-radius: 20px; padding: 2.2rem 2.5rem;
+      margin-bottom: 1.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+      flex-wrap: wrap; gap: 1.5rem;
+      overflow: hidden;
+    }
+    .current-weather::before {
+      content: '';
+      position: absolute; top: -40px; right: -40px;
+      width: 200px; height: 200px;
+      background: radial-gradient(circle, rgba(29,158,117,0.15) 0%, transparent 70%);
+      pointer-events: none;
+    }
+    .current-weather::after {
+      content: '';
+      position: absolute; bottom: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(29,158,117,0.4), transparent);
+    }
+
+    .weather-left h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px; font-weight: 700;
+      color: #fff; margin-bottom: 4px;
+    }
+    .weather-left p { font-size: 13px; color: #4ade80; margin-bottom: 1.2rem; font-weight: 500; letter-spacing: 0.04em; }
+    .temp {
+      font-family: 'Playfair Display', serif;
+      font-size: 72px; font-weight: 800;
+      color: #fff; line-height: 1;
+    }
+    .weather-desc { font-size: 17px; color: #7fcf9e; margin-top: 6px; font-weight: 400; }
+    .weather-icon { font-size: 88px; filter: drop-shadow(0 0 20px rgba(29,158,117,0.3)); }
+
+    /* ── STAT CARDS ── */
+    .weather-stats {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 12px; margin-bottom: 2rem;
+    }
+    .stat-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(29,158,117,0.15);
+      border-radius: 14px; padding: 1.4rem 1.2rem;
+      text-align: center; transition: border-color 0.2s, transform 0.2s;
+      position: relative; overflow: hidden;
+    }
+    .stat-card:hover { border-color: rgba(29,158,117,0.4); transform: translateY(-2px); }
+    .stat-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(29,158,117,0.5), transparent);
+    }
+    .stat-card .icon { font-size: 28px; margin-bottom: 10px; }
+    .stat-card .val { font-size: 22px; font-weight: 700; color: #e8f0e9; font-family: 'Playfair Display', serif; }
+    .stat-card .lbl { font-size: 11px; color: #4a6a4a; margin-top: 4px; letter-spacing: 0.06em; text-transform: uppercase; font-weight: 600; }
+
+    /* ── FORECAST ── */
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 700;
+      color: #e8f0e9; margin-bottom: 1rem;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, rgba(29,158,117,0.3), transparent);
+    }
+    .forecast-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px; margin-bottom: 2rem;
+    }
+    .forecast-card {
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(29,158,117,0.12);
+      border-radius: 14px; padding: 1.2rem 1rem;
+      text-align: center; transition: all 0.2s; cursor: default;
+    }
+    .forecast-card:hover {
+      background: rgba(29,158,117,0.08);
+      border-color: rgba(29,158,117,0.3);
+      transform: translateY(-3px);
+    }
+    .forecast-card .day { font-size: 12px; font-weight: 600; color: #4ade80; margin-bottom: 8px; letter-spacing: 0.05em; text-transform: uppercase; }
+    .forecast-card .f-icon { font-size: 32px; margin-bottom: 8px; }
+    .forecast-card .f-temp { font-size: 20px; font-weight: 700; color: #e8f0e9; font-family: 'Playfair Display', serif; }
+    .forecast-card .f-desc { font-size: 11px; color: #4a6a4a; margin-top: 4px; }
+    .forecast-card .f-rain { font-size: 11px; color: #4ade80; margin-top: 6px; font-weight: 600; }
+
+    /* ── ALERTS ── */
+    .alert-box {
+      border-radius: 12px; padding: 1.1rem 1.3rem;
+      margin-bottom: 10px; display: flex; align-items: flex-start; gap: 12px;
+      border: 1px solid;
+    }
+    .alert-box .alert-icon { font-size: 20px; margin-top: 1px; flex-shrink: 0; }
+    .alert-box h4 { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+    .alert-box p { font-size: 13px; line-height: 1.5; }
+    .alert-green { background: rgba(29,158,117,0.08); border-color: rgba(29,158,117,0.25); }
+    .alert-green h4 { color: #4ade80; }
+    .alert-green p { color: #7fcf9e; }
+    .alert-yellow { background: rgba(251,191,36,0.08); border-color: rgba(251,191,36,0.25); }
+    .alert-yellow h4 { color: #fbbf24; }
+    .alert-yellow p { color: #d4a547; }
+    .alert-red { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); }
+    .alert-red h4 { color: #f87171; }
+    .alert-red p { color: #c97474; }
+
+    /* ── FOOTER ── */
+    footer {
+      text-align: center; padding: 1.5rem;
+      border-top: 1px solid rgba(29,158,117,0.1);
+      background: rgba(0,0,0,0.2); margin-top: 2rem;
+    }
+    footer p { font-size: 12px; color: #3a5a3a; letter-spacing: 0.04em; }
+
+    /* ── RESPONSIVE ── */
+    @media(max-width: 600px) {
+      nav { padding: 1rem 1.2rem; }
+      .nav-links { gap: 1rem; }
+      .page-header { padding: 2.5rem 1.2rem 2rem; }
+      .current-weather { padding: 1.5rem; }
+      .temp { font-size: 56px; }
+      .weather-icon { font-size: 60px; }
+      .main { padding: 1.5rem 1rem 3rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a class="logo" href="/">
+      <div class="logo-icon">🌾</div>
+      KrishiMitra
+    </a>
+    <div class="nav-links">
+      <a href="/" data-lang="nav_home">Home</a>
+      <a href="/crop" data-lang="nav_crop">Crop</a>
+      <a href="/weather" class="active" data-lang="nav_weather">Weather</a>
+      <a href="/disease" data-lang="nav_disease">Disease</a>
+      <a href="/market" data-lang="nav_market">Market</a>
+    </div>
+  </nav>
+
+  <!-- HEADER -->
+  <div class="page-header">
+    <div class="header-badge"><span></span> Live Weather Intelligence</div>
+    <!-- ✅ data-lang added to h1 and p -->
+    <h1>🌤️ <span data-lang="weather_title">Weather Dashboard</span></h1>
+    <p data-lang="weather_sub">Search any city — get real-time weather and farming alerts</p>
+    <div class="search-bar">
+      <!-- ✅ data-lang-placeholder added to input -->
+      <input type="text" id="cityInput" data-lang-placeholder="weather_search" placeholder="Enter city name... e.g. Agra, Jaipur, Bhopal" />
+      <button id="searchBtn" data-lang="weather_search_btn">Search</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="loading" id="loading">
+      <span class="loading-dot"></span>
+      <span class="loading-dot"></span>
+      <span class="loading-dot"></span>
+      <!-- ✅ data-lang added to loading text -->
+      <br><br><span data-lang="weather_loading">Fetching real weather data...</span>
+    </div>
+
+    <div id="weatherContent">
+      <div class="current-weather">
+        <div class="weather-left">
+          <h2 id="cityName">Delhi, IN</h2>
+          <p id="weatherDate">Today</p>
+          <div class="temp" id="tempVal">--°C</div>
+          <div class="weather-desc" id="weatherDesc">Loading...</div>
+        </div>
+        <div class="weather-icon" id="weatherIcon">🌤️</div>
+      </div>
+
+      <div class="weather-stats">
+        <div class="stat-card">
+          <div class="icon">💧</div>
+          <div class="val" id="humidityVal">--%</div>
+          <!-- ✅ data-lang added to all stat labels -->
+          <div class="lbl" data-lang="stat_humidity">Humidity</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">💨</div>
+          <div class="val" id="windVal">-- km/h</div>
+          <div class="lbl" data-lang="stat_wind">Wind Speed</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🌧️</div>
+          <div class="val" id="rainVal">--%</div>
+          <div class="lbl" data-lang="stat_rain">Rain Chance</div>
+        </div>
+        <div class="stat-card">
+          <div class="icon">🌡️</div>
+          <div class="val" id="feelsVal">--°C</div>
+          <div class="lbl" data-lang="stat_feels">Feels Like</div>
+        </div>
+      </div>
+
+      <!-- ✅ data-lang added to section titles -->
+      <div class="section-title">📅 <span data-lang="weather_forecast">5-Day Forecast</span></div>
+      <div class="forecast-grid" id="forecastGrid"></div>
+
+      <div class="section-title">🚨 <span data-lang="weather_alerts">Farming Alerts</span></div>
+      <div id="alertsDiv"></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>KrishiMitra — Smart Farming for India · Final Year Project 2026</p>
+  </footer>
+
+  <script>
+    function getWeatherIcon(desc, temp) {
+      desc = desc.toLowerCase();
+      if (desc.includes('thunder') || desc.includes('storm')) return '⛈️';
+      if (desc.includes('rain') || desc.includes('drizzle')) return '🌧️';
+      if (desc.includes('cloud')) return '⛅';
+      if (desc.includes('mist') || desc.includes('fog') || desc.includes('haze')) return '🌫️';
+      if (desc.includes('snow')) return '❄️';
+      if (temp > 38) return '🔥';
+      if (temp > 28) return '☀️';
+      return '🌤️';
+    }
+
+    function formatDay(dateStr) {
+      var lang = localStorage.getItem('krishiLang') || 'en';
+      var daysEn = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+      var daysHi = ['रविवार','सोमवार','मंगलवार','बुधवार','गुरुवार','शुक्रवार','शनिवार'];
+      var d = new Date(dateStr);
+      return lang === 'hi' ? daysHi[d.getDay()] : daysEn[d.getDay()];
+    }
+
+    function generateAlerts(d) {
+      var lang = localStorage.getItem('krishiLang') || 'en';
+      var alerts = [];
+
+      if (d.rain > 70) {
+        alerts.push({ type: 'red', icon: '🚨',
+          title: lang==='hi' ? 'भारी बारिश की चेतावनी!' : 'Heavy Rain Warning!',
+          msg: lang==='hi' ? 'बारिश की बहुत अधिक संभावना — खेत में काम न करें, फसल सुरक्षित रखें।' : 'Very high chance of rain — do not work in fields, protect your stored crops.'
+        });
+      } else if (d.rain > 40) {
+        alerts.push({ type: 'yellow', icon: '⚠️',
+          title: lang==='hi' ? 'बारिश संभव है' : 'Rain Expected',
+          msg: lang==='hi' ? 'मध्यम बारिश हो सकती है — जल निकासी जांचें और स्प्रे में देरी करें।' : 'Moderate rain possible — check field drainage and delay any spraying.'
+        });
+      } else {
+        alerts.push({ type: 'green', icon: '✅',
+          title: lang==='hi' ? 'साफ मौसम' : 'Clear Weather',
+          msg: lang==='hi' ? 'खेती के लिए अच्छी स्थिति — बुवाई, छिड़काव या कटाई के लिए आदर्श समय।' : 'Good conditions for farming — ideal time for sowing, spraying or harvesting.'
+        });
+      }
+
+      if (d.temp > 40) {
+        alerts.push({ type: 'red', icon: '🌡️',
+          title: lang==='hi' ? 'अत्यधिक गर्मी की चेतावनी!' : 'Extreme Heat Alert!',
+          msg: lang==='hi' ? 'तापमान 40°C से ऊपर — फसलों को दिन में दो बार पानी दें, सुबह 11 से शाम 4 बजे तक खेत में काम न करें।' : 'Temperature above 40°C — water crops twice daily, avoid fieldwork between 11AM-4PM.'
+        });
+      } else if (d.temp > 34) {
+        alerts.push({ type: 'yellow', icon: '☀️',
+          title: lang==='hi' ? 'अधिक तापमान' : 'High Temperature',
+          msg: lang==='hi' ? 'गर्म मौसम — सिंचाई बढ़ाएं और नमी बनाए रखने के लिए मिट्टी पर मल्च करें।' : 'Hot weather detected — increase irrigation and mulch soil to retain moisture.'
+        });
+      } else if (d.temp < 10) {
+        alerts.push({ type: 'yellow', icon: '🥶',
+          title: lang==='hi' ? 'ठंड की चेतावनी' : 'Cold Weather Alert',
+          msg: lang==='hi' ? 'कम तापमान — संवेदनशील फसलों को पाले से बचाएं।' : 'Low temperature — protect sensitive crops from frost damage.'
+        });
+      }
+
+      if (d.wind > 40) {
+        alerts.push({ type: 'red', icon: '💨',
+          title: lang==='hi' ? 'तेज़ हवा की चेतावनी!' : 'Strong Wind Warning!',
+          msg: lang==='hi' ? 'तेज़ हवाएं — ग्रीनहाउस, जाल और फसल ढक्कन तुरंत सुरक्षित करें।' : 'High winds expected — secure greenhouses, nets and crop covers immediately.'
+        });
+      }
+
+      if (d.humidity > 85) {
+        alerts.push({ type: 'yellow', icon: '💧',
+          title: lang==='hi' ? 'अधिक नमी' : 'High Humidity',
+          msg: lang==='hi' ? 'हवा में अधिक नमी — फफूंद रोग का खतरा। रोकथाम के लिए फफूंदनाशक स्प्रे करें।' : 'High moisture in air — risk of fungal diseases. Apply preventive fungicide spray.'
+        });
+      }
+
+      return alerts;
+    }
+
+    function updateWeather(city) {
+      document.getElementById("loading").style.display = "block";
+      document.getElementById("weatherContent").style.opacity = "0.3";
+
+      fetch('/api/weather?city=' + encodeURIComponent(city))
+        .then(function(res) { return res.json(); })
+        .then(function(d) {
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("weatherContent").style.opacity = "1";
+
+          if (d.error) {
+            alert('City not found! Please try another city name.');
+            return;
+          }
+
+          document.getElementById("cityName").textContent = d.city + ', ' + d.country;
+          var lang = localStorage.getItem('krishiLang') || 'en';
+          document.getElementById("weatherDate").textContent = lang === 'hi'
+            ? new Date().toLocaleDateString('hi-IN', {weekday:'long', year:'numeric', month:'long', day:'numeric'})
+            : new Date().toDateString();
+          document.getElementById("tempVal").textContent = d.temp + '°C';
+          document.getElementById("weatherDesc").textContent = d.desc;
+          document.getElementById("weatherIcon").textContent = getWeatherIcon(d.desc, d.temp);
+          document.getElementById("humidityVal").textContent = d.humidity + '%';
+          document.getElementById("windVal").textContent = d.wind + ' km/h';
+          document.getElementById("rainVal").textContent = d.rain + '%';
+          document.getElementById("feelsVal").textContent = d.feels_like + '°C';
+
+          // Forecast
+          var fg = document.getElementById("forecastGrid");
+          fg.innerHTML = "";
+          for (var i = 0; i < d.forecast.length; i++) {
+            var f = d.forecast[i];
+            var card = document.createElement("div");
+            card.className = "forecast-card";
+            card.innerHTML =
+              '<div class="day">' + formatDay(f.date) + '</div>' +
+              '<div class="f-icon">' + getWeatherIcon(f.desc, f.temp) + '</div>' +
+              '<div class="f-temp">' + f.temp + '°C</div>' +
+              '<div class="f-desc">' + f.desc + '</div>' +
+              '<div class="f-rain">🌧 ' + f.rain + '% rain</div>';
+            fg.appendChild(card);
+          }
+
+          // Alerts
+          var ad = document.getElementById("alertsDiv");
+          ad.innerHTML = "";
+          var alerts = generateAlerts(d);
+          for (var j = 0; j < alerts.length; j++) {
+            var a = alerts[j];
+            var box = document.createElement("div");
+            box.className = "alert-box alert-" + a.type;
+            box.innerHTML =
+              '<div class="alert-icon">' + a.icon + '</div>' +
+              '<div><h4>' + a.title + '</h4><p>' + a.msg + '</p></div>';
+            ad.appendChild(box);
+          }
+        })
+        .catch(function() {
+          document.getElementById("loading").style.display = "none";
+          document.getElementById("weatherContent").style.opacity = "1";
+          alert('Connection error! Make sure Flask server is running.');
+        });
+    }
+
+    document.getElementById("searchBtn").addEventListener("click", function() {
+      var city = document.getElementById("cityInput").value.trim();
+      if (!city) { alert("Please enter a city name!"); return; }
+      updateWeather(city);
+    });
+
+    document.getElementById("cityInput").addEventListener("keypress", function(e) {
+      if (e.key === "Enter") {
+        var city = this.value.trim();
+        if (city) updateWeather(city);
+      }
+    });
+
+    updateWeather("Delhi");
+  </script>
+
+</body>
+</html>

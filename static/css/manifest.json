@@ -1,0 +1,16 @@
+{
+  "name": "KrishiMitra - Smart Farming",
+  "short_name": "KrishiMitra",
+  "description": "Smart farming app for Indian farmers",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f0f7f0",
+  "theme_color": "#1D9E75",
+  "icons": [
+    {
+      "src": "/static/icon.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    }
+  ]
+}
