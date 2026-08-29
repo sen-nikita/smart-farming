@@ -1,9 +1,10 @@
 from flask import Flask, render_template, request, jsonify, send_from_directory
 import requests
+import os
 
 app = Flask(__name__, template_folder='templates')
 
-WEATHER_API_KEY = "ca785a1a4b00323cbfc504dabe03306c"
+WEATHER_API_KEY = os.environ.get("WEATHER_API_KEY")
 
 @app.route('/')
 def home():
@@ -83,4 +84,4 @@ def get_weather():
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run()
