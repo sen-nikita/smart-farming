@@ -2,6 +2,10 @@
 
 Smart Farming is an AI-powered web application designed to assist farmers in making data-driven agricultural decisions. The system uses machine learning and real-time information to provide useful recommendations for crop selection, plant health, weather conditions, soil analysis, and fertilizer usage.
 
+## 🌐 Live Demo
+
+**Deployed Version:** https://smart-farming-w64r.onrender.com/
+
 ## ✨ Key Features
 
 🌱 **Crop Recommendation**
