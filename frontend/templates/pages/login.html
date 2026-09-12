@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Smart Farming - Login</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f1f8f3;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .login-container {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            padding: 35px;
+            border-radius: 15px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-top: 15px;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 15px;
+        }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 12px;
+            border: none;
+            border-radius: 8px;
+            background: #2e7d32;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #256b29;
+        }
+
+        .register-box {
+            margin-top: 25px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .message {
+            margin-top: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .success {
+            color: #2e7d32;
+        }
+
+        .error {
+            color: #c62828;
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="login-container">
+
+    <h1>🌱 Smart Farming</h1>
+
+    <p class="subtitle">Login to your account</p>
+
+    <!-- LOGIN FORM -->
+
+    <form id="loginForm">
+
+        <label for="loginEmail">Email</label>
+
+        <input
+            type="email"
+            id="loginEmail"
+            name="email"
+            placeholder="Enter your email"
+            required
+        >
+
+        <label for="loginPassword">Password</label>
+
+        <input
+            type="password"
+            id="loginPassword"
+            name="password"
+            placeholder="Enter your password"
+            required
+        >
+
+        <button type="submit">
+            Login
+        </button>
+
+    </form>
+
+    <div id="loginMessage" class="message"></div>
+
+
+    <!-- REGISTRATION -->
+
+    <div class="register-box">
+
+        <p class="subtitle">
+            Don't have an account? Create one below.
+        </p>
+
+        <form id="registerForm">
+
+            <label for="registerName">Name</label>
+
+            <input
+                type="text"
+                id="registerName"
+                name="name"
+                placeholder="Enter your name"
+                required
+            >
+
+            <label for="registerEmail">Email</label>
+
+            <input
+                type="email"
+                id="registerEmail"
+                name="email"
+                placeholder="Enter your email"
+                required
+            >
+
+            <label for="registerPassword">Password</label>
+
+            <input
+                type="password"
+                id="registerPassword"
+                name="password"
+                placeholder="Create a password"
+                required
+            >
+
+            <button type="submit">
+                Create Account
+            </button>
+
+        </form>
+
+        <div id="registerMessage" class="message"></div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+    // =====================================================
+    // LOGIN
+    // =====================================================
+
+    document.getElementById("loginForm").addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            const form = new FormData(this);
+
+            const message =
+                document.getElementById("loginMessage");
+
+            try {
+
+                const response = await fetch("/login", {
+                    method: "POST",
+                    body: form
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+
+                    message.textContent =
+                        "Login successful! Welcome " +
+                        data.user.name;
+
+                    message.className =
+                        "message success";
+
+                    // Redirect to home page
+                    setTimeout(function() {
+                        window.location.href = "/";
+                    }, 1000);
+
+                } else {
+
+                    message.textContent = data.message;
+
+                    message.className =
+                        "message error";
+                }
+
+            } catch (error) {
+
+                message.textContent =
+                    "Unable to connect to server.";
+
+                message.className =
+                    "message error";
+            }
+
+        }
+    );
+
+
+    // =====================================================
+    // REGISTRATION
+    // =====================================================
+
+    document.getElementById("registerForm").addEventListener(
+        "submit",
+        async function(event) {
+
+            event.preventDefault();
+
+            const form = new FormData(this);
+
+            const message =
+                document.getElementById("registerMessage");
+
+            try {
+
+                const response = await fetch("/register", {
+                    method: "POST",
+                    body: form
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+
+                    message.textContent =
+                        "Account created successfully!";
+
+                    message.className =
+                        "message success";
+
+                    this.reset();
+
+                } else {
+
+                    message.textContent =
+                        data.message;
+
+                    message.className =
+                        "message error";
+                }
+
+            } catch (error) {
+
+                message.textContent =
+                    "Unable to connect to server.";
+
+                message.className =
+                    "message error";
+            }
+
+        }
+    );
+
+</script>
+
+</body>
+</html>

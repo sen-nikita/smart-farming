@@ -75,7 +75,18 @@
     }
     .nav-links a:hover { color:var(--green-glow); }
     .nav-links a:hover::after { transform:scaleX(1); }
-    .nav-cta { background:var(--green-accent); color:var(--text-main)!important; padding:8px 20px; border-radius:8px; font-weight:500!important; transition:background .2s,transform .2s!important; }
+    .nav-cta {
+    display: inline-block;
+    background: var(--green-bright);
+    color: #ffffff !important;
+    padding: 9px 20px;
+    border-radius: 8px;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transition: background .2s, transform .2s !important;
+}
     .nav-cta::after { display:none!important; }
     .nav-cta:hover { background:var(--green-bright)!important; transform:translateY(-2px)!important; }
     .lang-btn {
@@ -293,12 +304,15 @@
     KrishiMitra
   </a>
   <div class="nav-links">
-    <a href="/crop" data-lang="nav_crop">Crops</a>
-    <a href="/weather" data-lang="nav_weather">Weather</a>
-    <a href="/disease" data-lang="nav_disease">Disease</a>
-    <a href="/market" data-lang="nav_market">Market</a>
-    <button id="langToggleBtn" class="lang-btn" onclick="toggleLanguage()">🇮🇳 हिंदी</button>
-  </div>
+  <a href="/crop" data-lang="nav_crop">Crops</a>
+  <a href="/weather" data-lang="nav_weather">Weather</a>
+  <a href="/disease" data-lang="nav_disease">Disease</a>
+  <a href="/market" data-lang="nav_market">Market</a>
+
+  <a href="/login" class="nav-cta" data-lang="nav_login">Login</a>
+
+  <button id="langToggleBtn" class="lang-btn" onclick="toggleLanguage()">🇮🇳 हिंदी</button>
+</div>
 </nav>
 
 <section class="hero">

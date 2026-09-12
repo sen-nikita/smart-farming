@@ -4,9 +4,9 @@ var translations = {
     "nav_home": "Home",
     "nav_crop": "Crops",
     "nav_weather": "Weather",
-    "nav_disease": "Disease",
-    "nav_market": "Market",
-
+    "nav_disease": "Disease", 
+"nav_market": "Market",
+"nav_login": "Login",
     // Index page
     "hero_badge": "Smart Farming Platform · India 2026",
     "hero_title": "Smarter,",
