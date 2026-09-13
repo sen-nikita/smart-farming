@@ -67,11 +67,12 @@ app.secret_key = os.environ.get(
 # DATABASE CONFIGURATION
 # ============================================================
 
-DATABASE_PATH = r"D:\SmartFarmingData\smart_farming.db"
+DATABASE_PATH = os.path.join(BASE_DIR, "smart_farming.db")
 
 app.config["SQLALCHEMY_DATABASE_URI"] = (
-    f"sqlite:///{DATABASE_PATH.replace(chr(92), '/')}"
+    f"sqlite:///{DATABASE_PATH}"
 )
+
 
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
@@ -101,7 +102,8 @@ class Crop(db.Model):
     soil_type = db.Column(db.String(100))
     season = db.Column(db.String(100))
     location = db.Column(db.String(100))
-
+with app.app_context():
+    db.create_all()
 
 # ============================================================
 # WEATHER API KEY
